@@ -253,7 +253,7 @@
     input, textarea { font-size: 16px !important; }
     .dica-arrastar { display: none; }
   }
-  header { padding-top: max(18px, env(safe-area-inset-top)); }
+  header { padding-top: max(18px, calc(env(safe-area-inset-top) + 22px)); }
   footer { padding-bottom: max(10px, env(safe-area-inset-bottom)); }
   body { -webkit-tap-highlight-color: transparent; }
 
@@ -277,6 +277,13 @@
   .item.destaque { animation: pisca 1s ease-in-out 4; }
   @keyframes pisca { 50% { background: rgba(244,200,74,.28); } }
   .x { background: none; border: 0; color: var(--suave); padding: 0 4px; font-size: 14px; }
+  .com-dica { position: relative; display: inline-block; }
+  .com-dica .ph { display: none; }
+  @media (hover: none) {
+    .com-dica.sem-valor .ph { display: block; position: absolute; left: 10px; top: 50%; transform: translateY(-50%);
+      color: var(--suave); font-size: 14px; pointer-events: none; white-space: nowrap; }
+    .com-dica.sem-valor input { color: transparent; min-width: 120px; min-height: 34px; }
+  }
   .detalhe input.data, .detalhe input.hora { width: auto; padding: 3px 6px; margin: 0; font-size: 12px; border-radius: 8px; }
   .x:hover { color: var(--txt); }
 </style>
@@ -326,7 +333,7 @@
     nome: "Renato Reis Neto",
     cidade: "Rio de Janeiro"
   };
-  var VERSAO = "1.3";
+  var VERSAO = "1.4";
 
   // ---------- sincronização (Firebase) ----------
   // Preencha com o firebaseConfig do projeto para ligar a sincronização.
@@ -719,7 +726,7 @@
         '<div class="linha-opcoes"><span class="rotulo">Dia</span>' +
         '<input type="date" class="data det-data" value="' + t.data + '" min="' + hojeStr() + '">' +
         '<span class="rotulo" style="min-width:0;margin-left:8px">Lembrete</span>' +
-        '<input type="time" class="hora det-hora' + (t.hora ? " sel" : "") + '" value="' + (t.hora || "") + '">' +
+        '<span class="com-dica' + (t.hora ? "" : " sem-valor") + '"><input type="time" class="hora det-hora' + (t.hora ? " sel" : "") + '" value="' + (t.hora || "") + '"><span class="ph">horário</span></span>' +
         (t.hora ? '<button class="x" data-acao="semhora" title="Tirar o lembrete">✕</button>' : "") + "</div>" +
         '<div class="linha-acao"><button class="btn-sec" data-acao="fechar">Pronto</button></div></div>';
     }
@@ -736,10 +743,10 @@
     return '<div class="linha-opcoes"><span class="rotulo">Quando</span>' +
       '<button class="pilula' + (d === h ? " sel" : "") + '" data-qd="' + h + '">Hoje</button>' +
       '<button class="pilula' + (d === am ? " sel" : "") + '" data-qd="' + am + '">Amanhã</button>' +
-      '<input type="date" id="novaData" class="data' + (d !== h && d !== am ? " sel" : "") + '" value="' + (d !== h && d !== am ? d : "") + '" min="' + h + '" title="Outro dia">' +
+      '<span class="com-dica' + (d !== h && d !== am ? "" : " sem-valor") + '"><input type="date" id="novaData" class="data' + (d !== h && d !== am ? " sel" : "") + '" value="' + (d !== h && d !== am ? d : "") + '" min="' + h + '" title="Outro dia"><span class="ph">outro dia</span></span>' +
       "</div>" +
       '<div class="linha-opcoes"><span class="rotulo">Lembrete</span>' +
-      '<input type="time" id="novaHora" class="hora' + (horaNova ? " sel" : "") + '" value="' + (horaNova || "") + '">' +
+      '<span class="com-dica' + (horaNova ? "" : " sem-valor") + '"><input type="time" id="novaHora" class="hora' + (horaNova ? " sel" : "") + '" value="' + (horaNova || "") + '"><span class="ph">horário</span></span>' +
       (horaNova ? '<button class="x" data-semhora-nova="1" title="Tirar o lembrete">✕</button>' : '<span class="dica" style="margin:0">' + (NATIVO ? "opcional, o Mac avisa na hora" : "opcional, avisa com o app aberto") + "</span>") +
       "</div>";
   }
@@ -854,7 +861,7 @@
       '<div class="linha-opcoes"><span class="rotulo">Prioridade</span>' + htmlEscolhaPrio(prioRotina, "pr") + "</div>" +
       htmlEscolhaEtiqueta(etqRotina, "data-re") +
       '<div class="linha-opcoes"><span class="rotulo">Lembrete</span>' +
-      '<input type="time" id="rotHora" class="hora' + (horaRotina ? " sel" : "") + '" value="' + (horaRotina || "") + '">' +
+      '<span class="com-dica' + (horaRotina ? "" : " sem-valor") + '"><input type="time" id="rotHora" class="hora' + (horaRotina ? " sel" : "") + '" value="' + (horaRotina || "") + '"><span class="ph">horário</span></span>' +
       '<span class="dica" style="margin:0">opcional</span></div>' +
       '<input type="text" class="campo" id="rotTxt" placeholder="Ex.: Regar as plantas" autocomplete="off">' +
       '<div class="linha-opcoes"><span class="rotulo">Dias</span>' + htmlDias(diasRotina, "data-dn") +
@@ -1141,9 +1148,12 @@
   });
   conteudo.addEventListener("change", function (e) {
     var el = e.target;
-    if (el.id === "novaData") { dataNova = el.value && el.value > hojeStr() ? el.value : null; render(); focar(); return; }
-    if (el.id === "novaHora") { horaNova = el.value || null; if (horaNova) pedirPermissaoWeb(); render(); focar(); return; }
-    if (el.id === "rotHora") { horaRotina = el.value || null; render(); return; }
+    // no iPhone o seletor já muda o valor ao abrir: guarda e só redesenha quando ele fechar
+    var focado = document.activeElement === el;
+    function depois(fn) { if (focado) { renderPendente = true; } else fn(); }
+    if (el.id === "novaData") { dataNova = el.value && el.value > hojeStr() ? el.value : null; marcarVazio(el); depois(function () { render(); focar(); }); return; }
+    if (el.id === "novaHora") { horaNova = el.value || null; if (horaNova) pedirPermissaoWeb(); marcarVazio(el); depois(function () { render(); focar(); }); return; }
+    if (el.id === "rotHora") { horaRotina = el.value || null; marcarVazio(el); depois(render); return; }
     var liT = el.closest(".item");
     var tt = liT && liT.dataset.id && acharT(liT.dataset.id);
     if (tt && el.classList.contains("det-data")) {
@@ -1152,11 +1162,11 @@
         tt.data = nd;
         if (nd > hojeStr() && aba === "hoje") { aberto = null; toast("Agendada para " + rotuloDia(nd).toLowerCase()); }
         if (nd === hojeStr() && aba === "proximos") { aberto = null; toast("Foi para Hoje"); }
-        salvar(); render();
+        salvarSemRedesenhar(); depois(render);
       }
       return;
     }
-    if (tt && el.classList.contains("det-hora")) { tt.hora = el.value || null; if (tt.hora) pedirPermissaoWeb(); salvar(); render(); return; }
+    if (tt && el.classList.contains("det-hora")) { tt.hora = el.value || null; if (tt.hora) pedirPermissaoWeb(); marcarVazio(el); salvarSemRedesenhar(); depois(render); return; }
     if (e.target.classList.contains("e-nome")) {
       var et = acharE(e.target.closest(".etq").dataset.eid);
       var v = e.target.value.trim();
@@ -1438,6 +1448,9 @@
     enviarNuvem();
   }
 
+  function salvarSemRedesenhar() { salvar(); }
+  function marcarVazio(el) { var w = el.closest(".com-dica"); if (w) w.classList.toggle("sem-valor", !el.value); }
+
   // se a pessoa está digitando, espera ela sair do campo para redesenhar a tela
   var renderPendente = false;
   function digitando() {
@@ -1476,10 +1489,10 @@
   }
 
   var MSG_ERRO = {
-    "auth/invalid-credential": "E-mail ou senha errados.",
+    "auth/invalid-credential": "E-mail ou senha errados. Se é a primeira vez, use Criar conta.",
     "auth/wrong-password": "E-mail ou senha errados.",
     "auth/user-not-found": "Não achei conta com esse e-mail. Use Criar conta.",
-    "auth/invalid-login-credentials": "E-mail ou senha errados.",
+    "auth/invalid-login-credentials": "E-mail ou senha errados. Se é a primeira vez, use Criar conta.",
     "auth/email-already-in-use": "Esse e-mail já tem conta. Use Entrar.",
     "auth/weak-password": "A senha precisa de pelo menos 6 caracteres.",
     "auth/invalid-email": "Esse e-mail não parece certo.",

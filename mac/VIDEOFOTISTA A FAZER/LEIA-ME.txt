@@ -1,4 +1,4 @@
-VIDEOFOTISTA A FAZER  ·  versão 1.2
+VIDEOFOTISTA A FAZER  ·  versão 1.4
 Lista de afazeres do dia, com a cara do VES.
 
 INSTALAR
@@ -26,6 +26,13 @@ USAR
 - O que não for feito passa para o dia seguinte (e sobe de prioridade, se ligado)
 - Engrenagem no rodapé (ou Cmd+,): Preferências
 - Xícara no rodapé: Sobre e "Pague um café"
+
+SINCRONIZAÇÃO (MAC E CELULAR)
+- Preferências > Sincronização (ou botão direito no ícone > Sincronização…)
+- Na primeira vez, no Mac: escreva seu e-mail e uma senha nova e toque em Criar conta.
+  Tudo o que já está no Mac sobe para a sua conta.
+- No celular (renatonetorj.github.io/videofotista-a-fazer): Entrar com o mesmo e-mail e senha.
+- Depois disso, o que mudar num aparece no outro em segundos.
 
 ONDE FICAM OS DADOS
 - Dados: ~/Library/Application Support/Videofotista A Fazer/dados.json
