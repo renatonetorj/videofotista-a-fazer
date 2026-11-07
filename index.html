@@ -240,6 +240,9 @@
   .toast button:empty { display: none; }
   .dica { color: var(--suave); font-size: 11.5px; margin: 2px 4px 10px; }
 
+  /* em tela larga (navegador do computador) o app vira uma coluna centralizada */
+  header, nav, main, footer { width: 100%; max-width: 560px; margin-left: auto; margin-right: auto; box-sizing: border-box; }
+
   /* celular: sem "passar o mouse", letra 16px nos campos (evita o zoom do iPhone), cantos da tela */
   @media (hover: none) {
     .acoes { opacity: 1; }
