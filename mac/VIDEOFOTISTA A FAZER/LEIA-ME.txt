@@ -1,0 +1,37 @@
+VIDEOFOTISTA A FAZER  ·  versão 1.2
+Lista de afazeres do dia, com a cara do VES.
+
+INSTALAR
+1. Coloque esta pasta em Documentos > ESTUDIO DE APPS
+2. Clique duas vezes em Instalar.command
+   Se o Mac bloquear: Ajustes do Sistema > Privacidade e Segurança,
+   role até o aviso do Instalar.command e clique em "Abrir Mesmo Assim"
+3. O app vai para Aplicativos, abre sozinho e o ícone aparece na barra de menu
+(Alternativa: arrastar o instalar.sh para o Terminal e apertar Enter)
+
+USAR
+- Clique no ícone da barra de menu: mostra ou esconde a janela
+- Botão direito no ícone: Preferências, Abrir ao ligar o Mac, pasta de backups, Sair
+- Botão vermelho da janela só esconde. Para fechar de vez: Cmd+Q
+- Escolha a prioridade (ou deixe "Sem") e a etiqueta, escreva e aperte Enter ou Anotar
+- Também dá para escrever "comprar café - alta"
+- Clique na tarefa para abrir os detalhes: editar o texto, observação e etiqueta
+- Clique numa etiqueta da lista para ver só aquelas tarefas
+- Clique na prioridade para trocar
+- "Quando": Hoje, Amanhã ou um dia no calendário. As agendadas ficam em Próximos
+  e entram sozinhas em Hoje no dia certo
+- "Lembrete": um horário opcional. O Mac mostra um aviso com som na hora marcada
+  (na primeira vez ele pede permissão para mostrar notificações: clique em Permitir)
+- Arraste as tarefas para mudar a ordem
+- O que não for feito passa para o dia seguinte (e sobe de prioridade, se ligado)
+- Engrenagem no rodapé (ou Cmd+,): Preferências
+- Xícara no rodapé: Sobre e "Pague um café"
+
+ONDE FICAM OS DADOS
+- Dados: ~/Library/Application Support/Videofotista A Fazer/dados.json
+- Backup automático diário (90 dias), em dois lugares:
+  Documentos > Videofotista A Fazer - Backups
+  Google Drive > Meu Drive > Videofotista A Fazer - Backups (ou a pasta escolhida em Preferências)
+
+TELAS
+- A pasta TELAS tem prints de cada aba do app, para mostrar como ele é
