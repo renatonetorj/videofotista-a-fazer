@@ -5,6 +5,7 @@
 import Cocoa
 import WebKit
 import UserNotifications
+import Security
 
 let NOME_APP = "Videofotista A Fazer"
 let ID_APP = "br.com.renatoneto.afazer"
@@ -196,6 +197,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, WKSc
         let m = NSMenu()
         m.addItem(withTitle: "Abrir", action: #selector(mostrarJanela), keyEquivalent: "")
         m.addItem(withTitle: "Preferências…", action: #selector(abrirPreferencias), keyEquivalent: "")
+        m.addItem(withTitle: "Sincronização…", action: #selector(abrirPreferencias), keyEquivalent: "")
         let auto = NSMenuItem(title: "Abrir ao ligar o Mac", action: #selector(alternarAbertura), keyEquivalent: "")
         auto.state = fm.fileExists(atPath: arquivoAgente.path) ? .on : .off
         m.addItem(auto)
@@ -220,7 +222,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, WKSc
         ucc.add(self, name: "app")
         let dados = lerDados()
         let auto = fm.fileExists(atPath: arquivoAgente.path) ? "true" : "false"
-        let js = "window.__NATIVO__ = true; window.__DADOS__ = \(dados); window.__PASTA_BACKUP__ = \(jsonPastaBackup()); window.__AUTO__ = \(auto);"
+        let js = "window.__NATIVO__ = true; window.__DADOS__ = \(dados); window.__PASTA_BACKUP__ = \(jsonPastaBackup()); window.__AUTO__ = \(auto); window.__LOGIN__ = \(jsonLoginSalvo());"
         ucc.addUserScript(WKUserScript(source: js, injectionTime: .atDocumentStart, forMainFrameOnly: true))
         config.userContentController = ucc
 
@@ -421,6 +423,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, WKSc
             importar()
         case "pastaBackups":
             abrirPastaBackups()
+        case "guardarLogin":
+            if let e = corpo["email"] as? String, let s = corpo["senha"] as? String { guardarLogin(email: e, senha: s) }
+        case "apagarLogin":
+            apagarLogin()
         case "lembretes":
             receberLembretes(corpo["lista"] as? [[String: Any]] ?? [])
         case "config":
@@ -455,6 +461,46 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, WKSc
             return
         }
         decisionHandler(.allow)
+    }
+
+    // MARK: - Login da sincronização (guardado no Keychain do Mac)
+
+    let servicoLogin = "br.com.renatoneto.afazer.sincronizacao"
+
+    func guardarLogin(email: String, senha: String) {
+        apagarLogin()
+        guard let dados = senha.data(using: .utf8) else { return }
+        let q: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: servicoLogin,
+            kSecAttrAccount as String: email,
+            kSecValueData as String: dados
+        ]
+        SecItemAdd(q as CFDictionary, nil)
+    }
+
+    func apagarLogin() {
+        let q: [String: Any] = [kSecClass as String: kSecClassGenericPassword, kSecAttrService as String: servicoLogin]
+        SecItemDelete(q as CFDictionary)
+    }
+
+    func jsonLoginSalvo() -> String {
+        let q: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: servicoLogin,
+            kSecReturnAttributes as String: true,
+            kSecReturnData as String: true,
+            kSecMatchLimit as String: kSecMatchLimitOne
+        ]
+        var item: CFTypeRef?
+        guard SecItemCopyMatching(q as CFDictionary, &item) == errSecSuccess,
+              let dict = item as? [String: Any],
+              let email = dict[kSecAttrAccount as String] as? String,
+              let dados = dict[kSecValueData as String] as? Data,
+              let senha = String(data: dados, encoding: .utf8) else { return "null" }
+        let obj: [String: Any] = ["email": email, "senha": senha]
+        if let d = try? JSONSerialization.data(withJSONObject: obj), let s = String(data: d, encoding: .utf8) { return s }
+        return "null"
     }
 
     // MARK: - Lembretes

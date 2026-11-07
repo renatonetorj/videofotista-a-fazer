@@ -19,7 +19,7 @@ swiftc -O -swift-version 5 -o "$APP/Contents/MacOS/AFazer" fonte/main.swift \
   -framework Cocoa -framework WebKit
 
 cp fonte/Info.plist "$APP/Contents/"
-cp fonte/index.html fonte/qrcode.min.js fonte/icone.png "$APP/Contents/Resources/"
+cp fonte/index.html fonte/qrcode.min.js fonte/firebase.min.js fonte/icone.png "$APP/Contents/Resources/"
 
 echo "› Criando o ícone..."
 ICONSET="build/AppIcon.iconset"

@@ -210,6 +210,10 @@
     display: flex; align-items: center; gap: 6px; padding: 8px 14px 10px;
     border-top: 1px solid var(--linha); color: var(--suave); font-size: 12px; position: relative;
   }
+  #statusSync { margin-left: 8px; white-space: nowrap; }
+  .sync-sincronizado { color: var(--verde); }
+  .sync-offline, .sync-enviando, .sync-sincronizando { color: var(--suave); }
+  .sync-erro { color: var(--coral); }
   footer .btn-rodape {
     background: var(--card); border: 1px solid var(--linha); border-radius: 999px;
     padding: 4px 12px; font-size: 12px; font-weight: 600;
@@ -293,7 +297,7 @@
 </nav>
 <main id="conteudo"></main>
 <footer>
-  <span id="status"></span>
+  <span id="status"></span><span id="statusSync"></span>
   <span class="espaco"></span>
   <button class="btn-rodape redondo" id="btnSobre" title="Sobre e contribuição">☕</button>
   <button class="btn-rodape redondo" id="btnPrefs" title="Preferências">
@@ -310,6 +314,7 @@
 <input type="file" id="arquivo" accept=".json,application/json" style="display:none">
 
 <script src="qrcode.min.js"></script>
+<script src="firebase.min.js"></script>
 <script>
 (function () {
   "use strict";
@@ -321,7 +326,18 @@
     nome: "Renato Reis Neto",
     cidade: "Rio de Janeiro"
   };
-  var VERSAO = "1.2";
+  var VERSAO = "1.3";
+
+  // ---------- sincronização (Firebase) ----------
+  // Preencha com o firebaseConfig do projeto para ligar a sincronização.
+  var FIREBASE = {
+    apiKey: "AIzaSyDYLbFhhxgaSmNGr6y_r_-aP30Zo1kPR_w",
+    authDomain: "videofotista-a-fazer.firebaseapp.com",
+    projectId: "videofotista-a-fazer",
+    storageBucket: "videofotista-a-fazer.firebasestorage.app",
+    messagingSenderId: "881275953896",
+    appId: "1:881275953896:web:fdc5e90c3ea89b72d19f5d"
+  };
   var SITE = "https://renatoneto.com.br";
 
   // ---------- base ----------
@@ -382,11 +398,13 @@
     if (!Array.isArray(c.etiquetas)) c.etiquetas = [];
     if (!Array.isArray(c.diasRotina)) c.diasRotina = base.diasRotina;
     var n = {
-      versao: 2,
+      versao: 3,
       config: c,
       tarefas: Array.isArray(d.tarefas) ? d.tarefas : [],
       rotinas: Array.isArray(d.rotinas) ? d.rotinas : [],
-      ultimaRotina: d.ultimaRotina || null
+      ultimaRotina: d.ultimaRotina || null,
+      apagadas: (d.apagadas && typeof d.apagadas === "object") ? d.apagadas : {},
+      configEm: d.configEm || 1
     };
     n.tarefas = n.tarefas.filter(function (t) { return t && t.texto; }).map(function (t) {
       return {
@@ -394,13 +412,14 @@
         data: t.data || hojeStr(), criadaEm: t.criadaEm || Date.now(),
         adiamentos: t.adiamentos || 0, feita: !!t.feita, feitaEm: t.feitaEm || null,
         rotinaId: t.rotinaId || null, etiqueta: t.etiqueta || null, obs: t.obs || "",
-        hora: t.hora || null, ordem: typeof t.ordem === "number" ? t.ordem : (t.criadaEm || Date.now())
+        hora: t.hora || null, ordem: typeof t.ordem === "number" ? t.ordem : (t.criadaEm || Date.now()),
+        atualizadoEm: t.atualizadoEm || 1
       };
     });
     n.rotinas = n.rotinas.filter(function (r) { return r && r.texto; }).map(function (r) {
       return { id: r.id || novoId(), texto: String(r.texto), prioridade: clamp(r.prioridade),
                dias: Array.isArray(r.dias) ? r.dias : [1, 2, 3, 4, 5], etiqueta: r.etiqueta || null,
-               hora: r.hora || null };
+               hora: r.hora || null, atualizadoEm: r.atualizadoEm || 1 };
     });
     return n;
   }
@@ -428,11 +447,49 @@
   var timerSalvar = null;
   function salvar() {
     clearTimeout(timerSalvar);
+    carimbar();
+    persistirLocal();
+    enviarNuvem();
+  }
+  function persistirLocal() {
     var json = JSON.stringify(D);
     if (NATIVO) post({ acao: "salvar", json: json });
     else { try { localStorage.setItem(CHAVE, json); } catch (e) {} }
     atualizarContador();
     enviarLembretes();
+  }
+
+  // ---------- carimbo de alteração (para a sincronização saber quem é mais novo) ----------
+  var base = {};
+  function semCarimbo(o) { var c = Object.assign({}, o); delete c.atualizadoEm; return JSON.stringify(c); }
+  function configCompart() {
+    return { etiquetas: C.etiquetas, diasRotina: C.diasRotina, subirPrioridade: C.subirPrioridade, som: C.som };
+  }
+  function itensLocais() {
+    var m = {};
+    D.tarefas.forEach(function (t) { m["t:" + t.id] = t; });
+    D.rotinas.forEach(function (r) { m["r:" + r.id] = r; });
+    return m;
+  }
+  function atualizarBase() {
+    base = {};
+    var m = itensLocais();
+    Object.keys(m).forEach(function (k) { base[k] = semCarimbo(m[k]); });
+    base["c:config"] = JSON.stringify(configCompart());
+  }
+  function carimbar() {
+    var agora = Date.now(), m = itensLocais();
+    Object.keys(m).forEach(function (k) {
+      var s = semCarimbo(m[k]);
+      if (base[k] !== s) { m[k].atualizadoEm = agora; base[k] = s; delete D.apagadas[k]; }
+    });
+    Object.keys(base).forEach(function (k) {
+      if (k !== "c:config" && !m[k]) { D.apagadas[k] = agora; delete base[k]; }
+    });
+    var sc = JSON.stringify(configCompart());
+    if (base["c:config"] !== sc) { D.configEm = agora; base["c:config"] = sc; }
+    var limite = agora - 90 * 86400000;
+    Object.keys(D.apagadas).forEach(function (k) { if (D.apagadas[k] < limite) delete D.apagadas[k]; });
   }
   function salvarDepois() {
     clearTimeout(timerSalvar);
@@ -485,10 +542,12 @@
   }
   function gerarRotinaHoje(r, dow) {
     if (r.dias.indexOf(dow) === -1) return;
+    var idDia = "rt-" + r.id + "-" + hojeStr();
+    if (D.apagadas["t:" + idDia]) return;
     var jaTem = D.tarefas.some(function (t) {
-      return t.rotinaId === r.id && (!t.feita || (t.feitaEm && hojeStr(new Date(t.feitaEm)) === hojeStr()));
+      return t.id === idDia || (t.rotinaId === r.id && (!t.feita || (t.feitaEm && hojeStr(new Date(t.feitaEm)) === hojeStr())));
     });
-    if (!jaTem) D.tarefas.push(nova(r.texto, r.prioridade, r.id, r.etiqueta, null, r.hora));
+    if (!jaTem) { var t = nova(r.texto, r.prioridade, r.id, r.etiqueta, null, r.hora); t.id = idDia; D.tarefas.push(t); }
   }
   window.verificarDia = verificarDia;
 
@@ -819,6 +878,7 @@
 
   function telaPrefs() {
     var h = '<button class="btn-sec voltar" data-ir="hoje">‹ Voltar</button>';
+    h += htmlSync();
 
     h += '<div class="caixa"><h3>Tarefas</h3>' +
       '<div class="pref"><div class="rot">Subir a prioridade a cada dia adiado<small>Baixa vira Média, Média vira Alta. "Sem" não muda.</small></div>' + chave("subirPrioridade", C.subirPrioridade) + "</div>" +
@@ -914,7 +974,7 @@
     var c = document.getElementById("conteudo");
     var buscaFocada = document.activeElement && document.activeElement.id === "busca";
     var guardado = {};
-    ["novaTxt", "rotTxt", "novaEt"].forEach(function (id) { var el = document.getElementById(id); if (el) guardado[id] = el.value; });
+    ["novaTxt", "rotTxt", "novaEt", "syncEmail", "syncSenha"].forEach(function (id) { var el = document.getElementById(id); if (el) guardado[id] = el.value; });
     var scroll = c.scrollTop;
     c.innerHTML = aba === "hoje" ? telaHoje() : aba === "proximos" ? telaProximos() : aba === "feitos" ? telaFeitos() : aba === "rotina" ? telaRotina() :
       aba === "prefs" ? telaPrefs() : telaSobre();
@@ -926,6 +986,7 @@
     }
     var n = pendentes().length, total = D.tarefas.filter(function (t) { return t.feita; }).length;
     document.getElementById("status").textContent = n + (n === 1 ? " pendente" : " pendentes") + " · " + total + " feitas";
+    atualizarStatus();
     atualizarContador();
   }
 
@@ -1011,6 +1072,14 @@
     }
     if (b.id === "btnEt") { criarEtiqueta(); return; }
     if (b.dataset.pb) { post({ acao: b.dataset.pb === "escolher" ? "escolherPastaBackup" : "pastaBackupAuto" }); return; }
+    if (b.dataset.sync) {
+      var a0 = b.dataset.sync;
+      if (a0 === "entrar") entrarOuCriar(false);
+      else if (a0 === "criar") entrarOuCriar(true);
+      else if (a0 === "esqueci") esqueciSenha();
+      else if (a0 === "sair") sairConta();
+      return;
+    }
     if (b.dataset.copiar) { copiar(b.dataset.copiar === "chave" ? PIX.chave : payloadPix()); return; }
 
     // tarefas
@@ -1056,6 +1125,7 @@
     if (e.target.id === "novaTxt" && e.key === "Enter") adicionar();
     if (e.target.id === "rotTxt" && e.key === "Enter") criarRotina();
     if (e.target.id === "novaEt" && e.key === "Enter") criarEtiqueta();
+    if (e.target.id === "syncSenha" && e.key === "Enter") entrarOuCriar(false);
     if (e.target.classList.contains("det-texto") && e.key === "Enter") e.target.blur();
     if (e.target.classList.contains("e-nome") && e.key === "Enter") e.target.blur();
   });
@@ -1267,12 +1337,220 @@
   };
   window.avisar = function (msg) { toast(msg); };
 
+  // ---------- sincronização ----------
+  var SYNC = { ativo: false, estado: "desligado", uid: null, email: null, erro: "", ocupado: false };
+  var fbAuth = null, fbDb = null, desligarEscuta = null, enviados = {}, prontoNuvem = false, tentouLoginSalvo = false;
+  var loginPendente = null;
+
+  function iniciarSync() {
+    if (!FIREBASE.apiKey || !window.FB) return;
+    try {
+      var F = window.FB;
+      var app = F.initializeApp(FIREBASE);
+      fbAuth = F.initializeAuth(app, { persistence: [F.indexedDBLocalPersistence, F.browserLocalPersistence, F.inMemoryPersistence] });
+      try { fbDb = F.initializeFirestore(app, { localCache: NATIVO ? F.memoryLocalCache() : F.persistentLocalCache() }); }
+      catch (e) { fbDb = F.initializeFirestore(app, { localCache: F.memoryLocalCache() }); }
+      if (window.__EMULADOR__) {
+        F.connectAuthEmulator(fbAuth, window.__EMULADOR__.auth, { disableWarnings: true });
+        F.connectFirestoreEmulator(fbDb, "127.0.0.1", window.__EMULADOR__.firestore);
+      }
+      SYNC.ativo = true;
+      F.onAuthStateChanged(fbAuth, mudouUsuario);
+    } catch (e) { SYNC.ativo = false; }
+  }
+
+  function mudouUsuario(u) {
+    if (desligarEscuta) { desligarEscuta(); desligarEscuta = null; }
+    prontoNuvem = false; enviados = {};
+    if (u) {
+      SYNC.uid = u.uid; SYNC.email = u.email; SYNC.estado = "sincronizando"; SYNC.erro = "";
+      if (NATIVO && loginPendente) post({ acao: "guardarLogin", email: loginPendente.email, senha: loginPendente.senha });
+      loginPendente = null;
+      escutarNuvem();
+    } else {
+      SYNC.uid = null; SYNC.email = null; SYNC.estado = "desligado";
+      var salvo = window.__LOGIN__;
+      if (NATIVO && salvo && salvo.email && !tentouLoginSalvo) {
+        tentouLoginSalvo = true;
+        SYNC.estado = "sincronizando";
+        window.FB.signInWithEmailAndPassword(fbAuth, salvo.email, salvo.senha).catch(function () { SYNC.estado = "desligado"; render(); });
+      }
+    }
+    render();
+  }
+
+  function escutarNuvem() {
+    var F = window.FB;
+    var col = F.collection(fbDb, "users", SYNC.uid, "itens");
+    desligarEscuta = F.onSnapshot(col, { includeMetadataChanges: true }, function (snap) {
+      var remotos = {};
+      snap.forEach(function (d) { remotos[d.id] = d.data(); });
+      receberNuvem(remotos);
+      SYNC.estado = snap.metadata.hasPendingWrites ? "enviando" : snap.metadata.fromCache ? "offline" : "sincronizado";
+      atualizarStatus();
+    }, function (err) {
+      SYNC.estado = "erro"; SYNC.erro = (err && err.code) || "";
+      atualizarStatus();
+    });
+  }
+
+  // junta o que veio da nuvem com o que está aqui: vale o mais novo de cada item
+  function receberNuvem(remotos) {
+    var mudou = false;
+    Object.keys(remotos).forEach(function (k) {
+      var r = remotos[k], ts = r.atualizadoEm || 0;
+      enviados[k] = Math.max(enviados[k] || 0, ts);
+      if (k === "c:config") {
+        if (ts > (D.configEm || 0) && r.dados) {
+          ["etiquetas", "diasRotina", "subirPrioridade", "som"].forEach(function (c) { if (r.dados[c] !== undefined) C[c] = r.dados[c]; });
+          D.configEm = ts; mudou = true;
+        }
+        return;
+      }
+      var tipo = k.charAt(0), id = k.slice(2);
+      var lista = tipo === "t" ? D.tarefas : tipo === "r" ? D.rotinas : null;
+      if (!lista) return;
+      var i = -1;
+      for (var j = 0; j < lista.length; j++) if (lista[j].id === id) { i = j; break; }
+      var local = i >= 0 ? lista[i] : null;
+      var tsLocal = local ? (local.atualizadoEm || 0) : (D.apagadas[k] || 0);
+      if (ts <= tsLocal) return;
+      if (r.apagado) {
+        if (local) { lista.splice(i, 1); mudou = true; }
+        D.apagadas[k] = ts;
+      } else if (r.dados) {
+        var n = normalizar(tipo === "t" ? { tarefas: [r.dados] } : { rotinas: [r.dados] });
+        var novo = tipo === "t" ? n.tarefas[0] : n.rotinas[0];
+        if (!novo) return;
+        novo.atualizadoEm = ts;
+        if (local) lista[i] = novo; else lista.push(novo);
+        delete D.apagadas[k];
+        mudou = true;
+      }
+    });
+    if (mudou) {
+      atualizarBase();
+      persistirLocal();
+      aplicarConfig();
+      if (digitando()) renderPendente = true; else render();
+    }
+    prontoNuvem = true;
+    enviarNuvem();
+  }
+
+  // se a pessoa está digitando, espera ela sair do campo para redesenhar a tela
+  var renderPendente = false;
+  function digitando() {
+    var el = document.activeElement;
+    return !!el && (el.tagName === "INPUT" || el.tagName === "TEXTAREA") && el.type !== "button";
+  }
+  document.addEventListener("focusout", function () {
+    if (renderPendente) setTimeout(function () { if (!digitando() && renderPendente) { renderPendente = false; render(); } }, 50);
+  });
+
+  // manda para a nuvem o que mudou aqui e ela ainda não tem
+  function enviarNuvem() {
+    if (!SYNC.uid || !prontoNuvem || !fbDb) return;
+    var F = window.FB, ops = [];
+    var m = itensLocais();
+    Object.keys(m).forEach(function (k) {
+      var it = m[k], ts = it.atualizadoEm || 0;
+      if (ts > (enviados[k] || 0)) ops.push([k, { tipo: k.charAt(0), dados: JSON.parse(JSON.stringify(it)), atualizadoEm: ts, apagado: false }]);
+    });
+    Object.keys(D.apagadas).forEach(function (k) {
+      var ts = D.apagadas[k];
+      if (ts > (enviados[k] || 0)) ops.push([k, { tipo: k.charAt(0), atualizadoEm: ts, apagado: true }]);
+    });
+    if ((D.configEm || 0) > (enviados["c:config"] || 0)) ops.push(["c:config", { tipo: "c", dados: configCompart(), atualizadoEm: D.configEm, apagado: false }]);
+    if (!ops.length) return;
+    for (var i = 0; i < ops.length; i += 400) {
+      var lote = F.writeBatch(fbDb);
+      ops.slice(i, i + 400).forEach(function (op) {
+        enviados[op[0]] = op[1].atualizadoEm;
+        lote.set(F.doc(fbDb, "users", SYNC.uid, "itens", op[0]), op[1]);
+      });
+      lote.commit().catch(function (err) { SYNC.estado = "erro"; SYNC.erro = (err && err.code) || ""; atualizarStatus(); });
+    }
+    SYNC.estado = "enviando";
+    atualizarStatus();
+  }
+
+  var MSG_ERRO = {
+    "auth/invalid-credential": "E-mail ou senha errados.",
+    "auth/wrong-password": "E-mail ou senha errados.",
+    "auth/user-not-found": "Não achei conta com esse e-mail. Use Criar conta.",
+    "auth/invalid-login-credentials": "E-mail ou senha errados.",
+    "auth/email-already-in-use": "Esse e-mail já tem conta. Use Entrar.",
+    "auth/weak-password": "A senha precisa de pelo menos 6 caracteres.",
+    "auth/invalid-email": "Esse e-mail não parece certo.",
+    "auth/missing-password": "Faltou a senha.",
+    "auth/network-request-failed": "Sem internet agora. Tente de novo.",
+    "auth/too-many-requests": "Muitas tentativas. Espere uns minutos."
+  };
+  function entrarOuCriar(criar) {
+    var email = (document.getElementById("syncEmail") || {}).value || "";
+    var senha = (document.getElementById("syncSenha") || {}).value || "";
+    email = email.trim();
+    if (!email || !senha) { SYNC.erro = "Preencha o e-mail e a senha."; render(); return; }
+    SYNC.ocupado = true; SYNC.erro = ""; render();
+    loginPendente = { email: email, senha: senha };
+    var F = window.FB;
+    (criar ? F.createUserWithEmailAndPassword : F.signInWithEmailAndPassword)(fbAuth, email, senha)
+      .then(function () { SYNC.ocupado = false; toast(criar ? "Conta criada e conectada" : "Conectado"); render(); })
+      .catch(function (e) { SYNC.ocupado = false; loginPendente = null; SYNC.erro = MSG_ERRO[e && e.code] || "Não deu certo (" + ((e && e.code) || "erro") + ")."; render(); });
+  }
+  function esqueciSenha() {
+    var email = ((document.getElementById("syncEmail") || {}).value || "").trim();
+    if (!email) { SYNC.erro = "Escreva o seu e-mail acima e toque de novo em Esqueci a senha."; render(); return; }
+    window.FB.sendPasswordResetEmail(fbAuth, email)
+      .then(function () { SYNC.erro = ""; toast("Mandei um e-mail para trocar a senha"); render(); })
+      .catch(function (e) { SYNC.erro = MSG_ERRO[e && e.code] || "Não consegui mandar o e-mail."; render(); });
+  }
+  function sairConta() {
+    if (NATIVO) post({ acao: "apagarLogin" });
+    tentouLoginSalvo = true;
+    window.FB.signOut(fbAuth).then(function () { toast("Desconectado. As tarefas continuam aqui."); });
+  }
+
+  var ROTULO_SYNC = { sincronizado: "sincronizado", enviando: "enviando…", sincronizando: "conectando…", offline: "sem internet, guardando aqui", erro: "erro na sincronização" };
+  function atualizarStatus() {
+    var el = document.getElementById("statusSync");
+    if (!el) return;
+    if (!SYNC.ativo || !SYNC.uid) { el.textContent = ""; el.className = ""; return; }
+    el.textContent = "☁ " + (ROTULO_SYNC[SYNC.estado] || "");
+    el.className = "sync-" + SYNC.estado;
+    if (aba === "prefs") { var p = document.getElementById("prefsSyncEstado"); if (p) p.textContent = ROTULO_SYNC[SYNC.estado] || ""; }
+  }
+
+  function htmlSync() {
+    if (!SYNC.ativo) return "";
+    var h = '<div class="caixa"><h3>Sincronização</h3>';
+    if (SYNC.uid) {
+      h += '<div class="pref"><div class="rot">Conectado como <b>' + esc(SYNC.email || "") + '</b><small>Situação: <span id="prefsSyncEstado">' + (ROTULO_SYNC[SYNC.estado] || "") + "</span></small></div>" +
+        '<button class="btn-sec" data-sync="sair">Sair</button></div>' +
+        '<div class="dica" style="margin:6px 0 0">Entre com o mesmo e-mail no Mac e no celular para ver as mesmas tarefas.</div>';
+    } else {
+      h += '<div class="dica" style="margin:0 0 8px">Entre para ver as mesmas tarefas no Mac e no celular. Na primeira vez, use <b>Criar conta</b>. Depois, em cada aparelho, use <b>Entrar</b> com o mesmo e-mail e senha.</div>' +
+        '<input class="campo" id="syncEmail" type="email" autocomplete="username" placeholder="Seu e-mail" style="margin-bottom:6px">' +
+        '<input class="campo" id="syncSenha" type="password" autocomplete="current-password" placeholder="Senha (mínimo 6 caracteres)">' +
+        (SYNC.erro ? '<div class="dica" style="margin:6px 0 0;color:var(--coral)">' + esc(SYNC.erro) + "</div>" : "") +
+        '<div class="linha-acao" style="justify-content:space-between;align-items:center">' +
+        '<button class="link" data-sync="esqueci">Esqueci a senha</button>' +
+        '<span><button class="btn-sec" data-sync="criar"' + (SYNC.ocupado ? " disabled" : "") + '>Criar conta</button> ' +
+        '<button class="btn-add" data-sync="entrar"' + (SYNC.ocupado ? " disabled" : "") + ">" + (SYNC.ocupado ? "Aguarde…" : "Entrar") + "</button></span></div>";
+    }
+    return h + "</div>";
+  }
+  window.abrirSincronizacao = function () { irPara("prefs"); };
+
   // ---------- início ----------
+  atualizarBase();
   aplicarConfig();
   render();
   verificarDia();
   setInterval(verificarDia, 60 * 1000);
   enviarLembretes();
+  iniciarSync();
   if (!NATIVO) { setInterval(checarLembretesWeb, 30 * 1000); checarLembretesWeb(); }
   if (!NATIVO && "serviceWorker" in navigator && location.protocol === "https:") {
     try { navigator.serviceWorker.register("sw.js"); } catch (e) {}

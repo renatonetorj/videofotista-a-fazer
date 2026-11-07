@@ -15,6 +15,7 @@ O que não for feito passa sozinho para o dia seguinte.
 - Feitos guardados para sempre, com busca, para reusar ou devolver para hoje
 - Observação em cada tarefa
 - Backup: exportar e importar (no Mac, automático todo dia)
+- **Sincronização entre Mac e celular**: entre com e-mail e senha (Preferências > Sincronização) e veja as mesmas tarefas em todos os aparelhos
 
 ## No celular (iPhone ou Android)
 
@@ -23,7 +24,7 @@ O que não for feito passa sozinho para o dia seguinte.
    Android: menu de três pontinhos e **Instalar app** (ou Adicionar à tela inicial)
 3. Pronto: vira um ícone e funciona sem internet
 
-As tarefas ficam guardadas só no aparelho. No celular, o lembrete avisa com o app aberto.
+Sem entrar numa conta, as tarefas ficam só no aparelho. Para ver as mesmas tarefas no Mac e no celular, use Preferências > Sincronização (na primeira vez, Criar conta; nos outros aparelhos, Entrar com o mesmo e-mail). No celular, o lembrete avisa com o app aberto.
 
 ## No Mac
 
