@@ -20,7 +20,7 @@ Sem cadastro: as tarefas ficam só no seu aparelho.
 
 ## No celular (iPhone ou Android)
 
-1. Abra **https://renatonetorj.github.io/videofotista-a-fazer/** no Safari (iPhone) ou no Chrome (Android)
+1. Abra **https://apps.renatoneto.com.br/videofotista-a-fazer/** no Safari (iPhone) ou no Chrome (Android)
 2. iPhone: toque em Compartilhar e depois em **Adicionar à Tela de Início**.
    Android: menu de três pontinhos e **Instalar app**
 3. Pronto: vira um ícone e funciona sem internet
