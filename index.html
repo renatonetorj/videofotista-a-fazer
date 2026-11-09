@@ -201,6 +201,7 @@
   .sobre { text-align: center; }
   .sobre img.logo { width: 84px; height: 84px; margin-top: 4px; }
   .sobre h2 { margin: 6px 0 2px; font-size: 16px; }
+  .sobre a.contato { text-decoration: none; display: inline-block; }
   .sobre .versao { color: var(--suave); font-size: 12px; }
   .qr { background: #fff; border-radius: 12px; padding: 10px; display: inline-block; margin: 10px 0 6px; line-height: 0; }
   .qr svg { width: 180px; height: 180px; }
@@ -336,7 +337,7 @@
     nome: "Renato Reis Neto",
     cidade: "Rio de Janeiro"
   };
-  var VERSAO = "1.5";
+  var VERSAO = "1.5.1";
 
   // ---------- sincronização (Firebase) ----------
   // Preencha com o firebaseConfig do projeto para ligar a sincronização.
@@ -950,13 +951,27 @@
     return p + crc.toString(16).toUpperCase().padStart(4, "0");
   }
 
+  // contato (montado em pedaços para dificultar robôs que varrem o código)
+  function linkEmail() {
+    var e = ["renatonetorj", "gmail.com"].join("@");
+    return "mailto:" + e + "?subject=" + encodeURIComponent("Videofotista A Fazer");
+  }
+  function linkZap() {
+    var n = ["55", "21", "98112", "5737"].join("");
+    return "https://wa.me/" + n + "?text=" + encodeURIComponent("Oi Renato, estou usando o Videofotista A Fazer e ");
+  }
+
   function telaSobre() {
     var h = '<button class="btn-sec voltar" data-ir="hoje">‹ Voltar</button>' +
       '<div class="caixa sobre"><img class="logo" src="icone.png" alt="">' +
       "<h2>Videofotista A Fazer</h2>" +
       '<div class="versao" id="versaoApp">Versão ' + VERSAO + (C.syncLigado ? " · sincronização ligada" : "") + "</div>" +
       '<p style="margin:10px 0 4px">Feito por Renato Neto, O Videofotista</p>' +
-      '<a href="' + SITE + '">renatoneto.com.br</a></div>';
+      '<a href="' + SITE + '">renatoneto.com.br</a>' +
+      '<p style="margin:14px 0 6px">Dúvida, sugestão ou problema? Fala comigo:</p>' +
+      '<div class="linha-acao" style="justify-content:center;flex-wrap:wrap">' +
+      '<a class="btn-add contato" href="' + linkEmail() + '">✉️ E-mail</a>' +
+      '<a class="btn-sec contato" target="_blank" rel="noopener" href="' + linkZap() + '">💬 WhatsApp</a></div></div>';
     if (PIX.chave) {
       var svg = "";
       try {
