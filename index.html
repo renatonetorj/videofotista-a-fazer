@@ -204,6 +204,8 @@
   .sobre .versao { color: var(--suave); font-size: 12px; }
   .qr { background: #fff; border-radius: 12px; padding: 10px; display: inline-block; margin: 10px 0 6px; line-height: 0; }
   .qr svg { width: 180px; height: 180px; }
+  .aviso-backup { border: 1px solid rgba(244,200,74,.45); }
+  .texto-cafe { margin: 8px 4px 0; font-size: 13.5px; line-height: 1.5; text-align: center; }
   .chave-pix { font-size: 13px; user-select: text; -webkit-user-select: text; word-break: break-all; }
 
   footer {
@@ -333,7 +335,7 @@
     nome: "Renato Reis Neto",
     cidade: "Rio de Janeiro"
   };
-  var VERSAO = "1.4";
+  var VERSAO = "1.5";
 
   // ---------- sincronização (Firebase) ----------
   // Preencha com o firebaseConfig do projeto para ligar a sincronização.
@@ -387,7 +389,7 @@
 
   function configPadrao() {
     return {
-      subirPrioridade: true, porCima: false, letra: "M", contador: true, som: true,
+      subirPrioridade: true, porCima: false, letra: "M", contador: true, som: true, lembreteBackup: true,
       diasRotina: [1, 2, 3, 4, 5],
       etiquetas: [
         { id: "e-casa", nome: "Casa", cor: "#5FD3C4" },
@@ -760,7 +762,7 @@
       return t.feita && t.feitaEm && hojeStr(new Date(t.feitaEm)) === hojeStr();
     }).length;
 
-    var h = '<div class="caixa nova">' +
+    var h = htmlLembreteBackup() + '<div class="caixa nova">' +
       '<div class="linha-opcoes"><span class="rotulo">Prioridade</span>' + htmlEscolhaPrio(prioNova, "pn") + "</div>" +
       htmlEscolhaEtiqueta(etqNova || filtro, "data-pe") +
       htmlQuando() +
@@ -890,6 +892,7 @@
     h += '<div class="caixa"><h3>Tarefas</h3>' +
       '<div class="pref"><div class="rot">Subir a prioridade a cada dia adiado<small>Baixa vira Média, Média vira Alta. "Sem" não muda.</small></div>' + chave("subirPrioridade", C.subirPrioridade) + "</div>" +
       '<div class="pref"><div class="rot">Tocar um som ao concluir</div>' + chave("som", C.som) + "</div>" +
+      (NATIVO ? "" : '<div class="pref"><div class="rot">Lembrar de fazer backup<small>Um aviso a cada 7 dias para guardar uma cópia das suas tarefas.</small></div>' + chave("lembreteBackup", C.lembreteBackup !== false) + "</div>") +
       "</div>";
 
     h += '<div class="caixa"><h3>Janela</h3>';
@@ -950,7 +953,7 @@
     var h = '<button class="btn-sec voltar" data-ir="hoje">‹ Voltar</button>' +
       '<div class="caixa sobre"><img class="logo" src="icone.png" alt="">' +
       "<h2>Videofotista A Fazer</h2>" +
-      '<div class="versao">Versão ' + VERSAO + "</div>" +
+      '<div class="versao" id="versaoApp">Versão ' + VERSAO + (C.syncLigado ? " · sincronização ligada" : "") + "</div>" +
       '<p style="margin:10px 0 4px">Feito por Renato Neto, O Videofotista</p>' +
       '<a href="' + SITE + '">renatoneto.com.br</a></div>';
     if (PIX.chave) {
@@ -961,12 +964,14 @@
         qr.make();
         svg = qr.createSvgTag(4, 0);
       } catch (e) {}
-      h += '<div class="caixa sobre"><h2>Gostou? Pague um café ☕</h2>' +
-        '<div class="dica" style="margin:4px 0 0">Aponte a câmera do app do banco para o QR Code, ou copie a chave Pix. Você escolhe o valor.</div>' +
+      h += '<div class="caixa sobre"><h2>Pague um café ☕</h2>' +
+        '<p class="texto-cafe">O Videofotista A Fazer é um presente feito por mim, Renato Neto, O Videofotista. ' +
+        "Se ele te ajuda, um cafezinho, uma soda tônica ou uma água mineral com gás pelo Pix vão ser muito bem-vindos. Qualquer valor.</p>" +
         (svg ? '<div class="qr">' + svg + "</div>" : "") +
-        '<div class="chave-pix">' + esc(PIX.chave) + "</div>" +
-        '<div class="linha-acao" style="justify-content:center"><button class="btn-add" data-copiar="chave">Copiar chave Pix</button>' +
-        '<button class="btn-sec" data-copiar="codigo">Copiar Pix copia e cola</button></div></div>';
+        '<div class="chave-pix">Chave Pix: ' + esc(PIX.chave) + "</div>" +
+        '<div class="linha-acao" style="justify-content:center;flex-wrap:wrap"><button class="btn-add" data-copiar="chave">Copiar chave Pix</button>' +
+        '<button class="btn-sec" data-copiar="codigo">Copiar Pix Copia e Cola</button></div>' +
+        '<div class="dica" style="margin:10px 0 0">No app do banco, aparece o meu nome completo: <b>Renato dos Reis Paes Leme Neto</b>.</div></div>';
     }
     return h;
   }
@@ -1079,6 +1084,11 @@
     }
     if (b.id === "btnEt") { criarEtiqueta(); return; }
     if (b.dataset.pb) { post({ acao: b.dataset.pb === "escolher" ? "escolherPastaBackup" : "pastaBackupAuto" }); return; }
+    if (b.dataset.bk) {
+      if (b.dataset.bk === "agora") exportarBackup();
+      else { C.backupDepois = Date.now() + 3 * 86400000; persistirLocal(); render(); }
+      return;
+    }
     if (b.dataset.sync) {
       var a0 = b.dataset.sync;
       if (a0 === "entrar") entrarOuCriar(false);
@@ -1295,6 +1305,42 @@
   }
 
   // ---------- backup ----------
+  function exportarBackup() {
+    var json = JSON.stringify(D, null, 2);
+    var nome = "Videofotista A Fazer - backup " + hojeStr() + ".json";
+    C.ultimoBackup = Date.now(); C.backupDepois = 0; persistirLocal();
+    if (NATIVO) { post({ acao: "exportar", json: json }); render(); return; }
+    try {
+      var arq = new File([json], nome, { type: "application/json" });
+      if (navigator.canShare && navigator.canShare({ files: [arq] })) {
+        navigator.share({ files: [arq], title: nome }).catch(function () {});
+        render(); return;
+      }
+    } catch (e) {}
+    var a = document.createElement("a");
+    a.href = URL.createObjectURL(new Blob([json], { type: "application/json" }));
+    a.download = nome;
+    document.body.appendChild(a); a.click(); a.remove();
+    toast("Backup salvo em Downloads");
+    render();
+  }
+  // lembrete: fora do Mac, sem conta conectada, a cada 7 dias
+  function precisaLembrarBackup() {
+    if (NATIVO || SYNC.uid || C.lembreteBackup === false) return false;
+    if (D.tarefas.length + D.rotinas.length < 3) return false;
+    var agora = Date.now();
+    if (C.backupDepois && agora < C.backupDepois) return false;
+    return !C.ultimoBackup || agora - C.ultimoBackup > 7 * 86400000;
+  }
+  function htmlLembreteBackup() {
+    if (!precisaLembrarBackup()) return "";
+    var dias = C.ultimoBackup ? Math.floor((Date.now() - C.ultimoBackup) / 86400000) : null;
+    return '<div class="caixa aviso-backup"><b>Hora de guardar um backup</b>' +
+      '<div class="dica" style="margin:4px 0 8px">' + (dias ? "Faz " + dias + " dias desde o último. " : "Você ainda não guardou nenhum. ") +
+      "Suas tarefas ficam só neste aparelho: salve o arquivo no Drive, no iCloud ou mande para você mesmo.</div>" +
+      '<div class="linha-acao" style="margin:0"><button class="btn-sec" data-bk="depois">Depois</button><button class="btn-add" data-bk="agora">Fazer backup agora</button></div></div>';
+  }
+
   var menuB = document.getElementById("menuBackup");
   if (!NATIVO) document.getElementById("bPasta").style.display = "none";
   document.getElementById("btnBackup").onclick = function (e) { e.stopPropagation(); menuB.classList.toggle("aberto"); };
@@ -1304,15 +1350,8 @@
     if (!b) return;
     menuB.classList.remove("aberto");
     var json = JSON.stringify(D, null, 2);
-    if (b.dataset.b === "exportar") {
-      if (NATIVO) post({ acao: "exportar", json: json });
-      else {
-        var a = document.createElement("a");
-        a.href = URL.createObjectURL(new Blob([json], { type: "application/json" }));
-        a.download = "Videofotista A Fazer - backup " + hojeStr() + ".json";
-        a.click();
-      }
-    } else if (b.dataset.b === "importar") {
+    if (b.dataset.b === "exportar") exportarBackup();
+    else if (b.dataset.b === "importar") {
       if (NATIVO) post({ acao: "importar" });
       else document.getElementById("arquivo").click();
     } else if (b.dataset.b === "pasta") post({ acao: "pastaBackups" });
@@ -1353,7 +1392,10 @@
   var loginPendente = null;
 
   function iniciarSync() {
-    if (!FIREBASE.apiKey || !window.FB) return;
+    if (!FIREBASE.apiKey || !window.FB || fbAuth) return;
+    // só liga em quem ativou (5 toques na versão, na tela Sobre); quem ganha o app de presente nem conecta
+    if (NATIVO && window.__LOGIN__ && window.__LOGIN__.email && !C.syncLigado) { C.syncLigado = true; persistirLocal(); }
+    if (!C.syncLigado) return;
     try {
       var F = window.FB;
       var app = F.initializeApp(FIREBASE);
@@ -1498,7 +1540,9 @@
     "auth/invalid-email": "Esse e-mail não parece certo.",
     "auth/missing-password": "Faltou a senha.",
     "auth/network-request-failed": "Sem internet agora. Tente de novo.",
-    "auth/too-many-requests": "Muitas tentativas. Espere uns minutos."
+    "auth/too-many-requests": "Muitas tentativas. Espere uns minutos.",
+    "auth/admin-restricted-operation": "O cadastro de contas novas está fechado.",
+    "auth/operation-not-allowed": "O cadastro de contas novas está fechado."
   };
   function entrarOuCriar(criar) {
     var email = (document.getElementById("syncEmail") || {}).value || "";
@@ -1555,6 +1599,27 @@
     return h + "</div>";
   }
   window.abrirSincronizacao = function () { irPara("prefs"); };
+
+  // 5 toques seguidos na versão (tela Sobre) ligam ou desligam a sincronização neste aparelho
+  var toquesVersao = 0, timerToques = null;
+  document.getElementById("conteudo").addEventListener("click", function (e) {
+    if (!e.target.closest("#versaoApp")) return;
+    toquesVersao++;
+    clearTimeout(timerToques);
+    timerToques = setTimeout(function () { toquesVersao = 0; }, 1500);
+    if (toquesVersao < 5) return;
+    toquesVersao = 0;
+    if (!FIREBASE.apiKey) return;
+    if (!C.syncLigado) {
+      C.syncLigado = true; persistirLocal(); iniciarSync();
+      toast("Sincronização ligada"); irPara("prefs");
+    } else if (!SYNC.uid) {
+      C.syncLigado = false; persistirLocal();
+      toast("Sincronização escondida"); render();
+    } else {
+      toast("Saia da conta antes, em Preferências");
+    }
+  });
 
   // ---------- início ----------
   atualizarBase();

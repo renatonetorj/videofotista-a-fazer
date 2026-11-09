@@ -1,6 +1,6 @@
 # Videofotista A Fazer
 
-Lista de afazeres do dia, feita por [Renato Neto, O Videofotista](https://renatoneto.com.br).
+Lista de afazeres do dia, um presente de [Renato Neto, O Videofotista](https://renatoneto.com.br).
 O que não for feito passa sozinho para o dia seguinte.
 
 ![Hoje](telas/1-Hoje.png)
@@ -12,27 +12,27 @@ O que não for feito passa sozinho para o dia seguinte.
 - Agendar para amanhã ou qualquer dia (aba Próximos)
 - Lembrete com horário
 - Rotinas que se repetem nos dias da semana que você escolher
-- Feitos guardados para sempre, com busca, para reusar ou devolver para hoje
+- Feitos guardados, com busca, para reusar ou devolver para hoje
 - Observação em cada tarefa
-- Backup: exportar e importar (no Mac, automático todo dia)
-- **Sincronização entre Mac e celular**: entre com e-mail e senha (Preferências > Sincronização) e veja as mesmas tarefas em todos os aparelhos
+- Backup em arquivo (.json), com lembrete
+
+Sem cadastro: as tarefas ficam só no seu aparelho.
 
 ## No celular (iPhone ou Android)
 
 1. Abra **https://renatonetorj.github.io/videofotista-a-fazer/** no Safari (iPhone) ou no Chrome (Android)
 2. iPhone: toque em Compartilhar e depois em **Adicionar à Tela de Início**.
-   Android: menu de três pontinhos e **Instalar app** (ou Adicionar à tela inicial)
+   Android: menu de três pontinhos e **Instalar app**
 3. Pronto: vira um ícone e funciona sem internet
 
-Sem entrar numa conta, as tarefas ficam só no aparelho. Para ver as mesmas tarefas no Mac e no celular, use Preferências > Sincronização (na primeira vez, Criar conta; nos outros aparelhos, Entrar com o mesmo e-mail). No celular, o lembrete avisa com o app aberto.
+No Windows, abra o mesmo endereço no Chrome ou no Edge e use **Instalar app**.
+No celular, o lembrete avisa com o app aberto.
 
 ## No Mac
 
-Baixe este repositório (botão verde **Code** > **Download ZIP**), abra a pasta
-`mac/VIDEOFOTISTA A FAZER` e clique duas vezes em **Instalar.command**.
-O app fica na barra de menu, abre sozinho ao ligar o Mac e faz backup todo dia
-em Documentos e no Google Drive. Se o Mac bloquear: Ajustes do Sistema >
-Privacidade e Segurança > Abrir Mesmo Assim.
+Baixe o arquivo **[Videofotista-A-Fazer-Mac.zip](Videofotista-A-Fazer-Mac.zip)**, descompacte e siga o LEIA-ME
+(é só clicar duas vezes em **Instalar.command**). O app fica na barra de menu, abre ao ligar o Mac
+e faz backup automático todo dia.
 
 ## Gostou?
 
