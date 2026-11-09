@@ -1,5 +1,5 @@
 // Videofotista A Fazer: guarda os arquivos para funcionar sem internet
-const CACHE = "afazer-1.5";
+const CACHE = "afazer-1.5b";
 const ARQUIVOS = ["./", "index.html", "qrcode.min.js", "firebase.min.js", "icone.png", "manifest.webmanifest",
                   "icon-192.png", "icon-512.png", "apple-touch-icon.png"];
 self.addEventListener("install", e => {
