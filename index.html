@@ -21,7 +21,7 @@
     --linha: rgba(255,255,255,.08);
     --txt: #f3f3f3;
     --suave: #b9b9b9;
-    --amarelo: #F4C84A;
+    --amarelo: #FFDE59;
     --verde: #6FD08C;
     --coral: #EE7D6E;
   }
@@ -68,7 +68,7 @@
     border-radius: 10px; padding: 10px 12px; color: var(--txt); outline: none;
     user-select: text; -webkit-user-select: text;
   }
-  .campo:focus, .busca:focus, .detalhe input:focus, .detalhe textarea:focus { border-color: rgba(244,200,74,.6); }
+  .campo:focus, .busca:focus, .detalhe input:focus, .detalhe textarea:focus { border-color: rgba(255,222,89,.6); }
   .linha-opcoes { display: flex; align-items: center; gap: 6px; margin: 8px 0; flex-wrap: wrap; }
   .nova .linha-opcoes:first-child { margin-top: 0; }
   .linha-opcoes .rotulo { color: var(--suave); font-size: 12px; margin-right: 2px; min-width: 62px; }
@@ -80,14 +80,14 @@
     border: 1px solid transparent; background: transparent; white-space: nowrap;
   }
   .p1 { color: var(--coral); border-color: rgba(238,125,110,.55); }
-  .p2 { color: var(--amarelo); border-color: rgba(244,200,74,.55); }
+  .p2 { color: var(--amarelo); border-color: rgba(255,222,89,.55); }
   .p3 { color: var(--verde); border-color: rgba(111,208,140,.55); }
   .p4 { color: var(--suave); border-color: rgba(255,255,255,.25); }
   .escolha { display: inline-flex; gap: 6px; flex-wrap: wrap; }
   .escolha .prio, .escolha .tag { opacity: .45; }
   .escolha .sel { opacity: 1; }
   .escolha .prio.sel.p1 { background: rgba(238,125,110,.15); }
-  .escolha .prio.sel.p2 { background: rgba(244,200,74,.15); }
+  .escolha .prio.sel.p2 { background: rgba(255,222,89,.15); }
   .escolha .prio.sel.p3 { background: rgba(111,208,140,.15); }
   .escolha .prio.sel.p4 { background: rgba(255,255,255,.1); }
 
@@ -205,7 +205,7 @@
   .sobre .versao { color: var(--suave); font-size: 12px; }
   .qr { background: #fff; border-radius: 12px; padding: 10px; display: inline-block; margin: 10px 0 6px; line-height: 0; }
   .qr svg { width: 180px; height: 180px; }
-  .aviso-backup { border: 1px solid rgba(244,200,74,.45); }
+  .aviso-backup { border: 1px solid rgba(255,222,89,.45); }
   #versaoApp { cursor: pointer; touch-action: manipulation; display: inline-block; padding: 6px 14px; -webkit-user-select: none; user-select: none; }
   .texto-cafe { margin: 8px 4px 0; font-size: 13.5px; line-height: 1.5; text-align: center; }
   .chave-pix { font-size: 13px; user-select: text; -webkit-user-select: text; word-break: break-all; }
@@ -266,20 +266,20 @@
     border-radius: 999px; padding: 3px 10px; font-size: 11.5px; font-weight: 700;
     border: 1px solid rgba(255,255,255,.25); background: transparent; color: var(--suave);
   }
-  .pilula.sel { background: rgba(244,200,74,.15); border-color: rgba(244,200,74,.6); color: var(--amarelo); }
+  .pilula.sel { background: rgba(255,222,89,.15); border-color: rgba(255,222,89,.6); color: var(--amarelo); }
   input.data, input.hora {
     background: var(--card2); border: 1px solid var(--linha); color: var(--txt);
     border-radius: 8px; padding: 3px 6px; font-size: 12px; outline: none; color-scheme: dark;
     user-select: text; -webkit-user-select: text;
   }
-  input.data.sel, input.hora.sel { border-color: rgba(244,200,74,.6); color: var(--amarelo); }
+  input.data.sel, input.hora.sel { border-color: rgba(255,222,89,.6); color: var(--amarelo); }
   .sino { font-size: 12px; color: var(--amarelo); white-space: nowrap; }
   .sino.passou { color: var(--suave); }
   .item[draggable=true] { cursor: grab; }
   .item.arrastando { opacity: .35; }
   .item.alvo { box-shadow: 0 -3px 0 0 var(--amarelo); }
   .item.destaque { animation: pisca 1s ease-in-out 4; }
-  @keyframes pisca { 50% { background: rgba(244,200,74,.28); } }
+  @keyframes pisca { 50% { background: rgba(255,222,89,.28); } }
   .x { background: none; border: 0; color: var(--suave); padding: 0 4px; font-size: 14px; }
   .com-dica { position: relative; display: inline-block; }
   .com-dica .ph { display: none; }
@@ -295,7 +295,7 @@
 <body>
 <header>
   <h1 aria-label="Videofotista A Fazer">
-    <span class="marca"><span>VIDEOF</span><svg viewBox="0 0 26 26" aria-hidden="true"><circle cx="13" cy="13" r="10.5" fill="none" stroke="#F4C84A" stroke-width="4"/><path d="M8.5 13.3l3 3 6-6.3" fill="none" stroke="#F4C84A" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg><span>TISTA</span></span>
+    <span class="marca"><span>VIDEOF</span><svg viewBox="0 0 26 26" aria-hidden="true"><circle cx="13" cy="13" r="10.5" fill="none" stroke="#FFDE59" stroke-width="4"/><path d="M8.5 13.3l3 3 6-6.3" fill="none" stroke="#FFDE59" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg><span>TISTA</span></span>
     <span class="app">A FAZER</span>
   </h1>
   <div class="data" id="data"></div>
@@ -337,7 +337,7 @@
     nome: "Renato Reis Neto",
     cidade: "Rio de Janeiro"
   };
-  var VERSAO = "1.5.2";
+  var VERSAO = "1.5.3";
 
   // ---------- sincronização (Firebase) ----------
   // Preencha com o firebaseConfig do projeto para ligar a sincronização.
@@ -357,7 +357,7 @@
   var PRIO = { 1: "Alta", 2: "Média", 3: "Baixa", 4: "Sem" };
   var DIAS = ["D", "S", "T", "Q", "Q", "S", "S"];
   var DIAS_NOME = ["domingo", "segunda", "terça", "quarta", "quinta", "sexta", "sábado"];
-  var CORES = ["#6FA8F2", "#B08CF2", "#F28CC4", "#F2A65A", "#5FD3C4", "#F4C84A", "#EE7D6E", "#A0A0A0"];
+  var CORES = ["#6FA8F2", "#B08CF2", "#F28CC4", "#F2A65A", "#5FD3C4", "#FFDE59", "#EE7D6E", "#A0A0A0"];
   var ZOOM = { P: 0.9, M: 1, G: 1.15 };
 
   var ICON = {
@@ -407,6 +407,7 @@
     var base = configPadrao(), c = (d.config && typeof d.config === "object") ? d.config : {};
     Object.keys(base).forEach(function (k) { if (c[k] === undefined) c[k] = base[k]; });
     if (!Array.isArray(c.etiquetas)) c.etiquetas = [];
+    c.etiquetas.forEach(function (e) { if (e && String(e.cor).toUpperCase() === "#F4C84A") e.cor = "#FFDE59"; }); // amarelo antigo
     if (!Array.isArray(c.diasRotina)) c.diasRotina = base.diasRotina;
     var n = {
       versao: 3,
@@ -988,7 +989,7 @@
         '<div class="chave-pix">Chave Pix: ' + esc(PIX.chave) + "</div>" +
         '<div class="linha-acao" style="justify-content:center;flex-wrap:wrap"><button class="btn-add" data-copiar="chave">Copiar chave Pix</button>' +
         '<button class="btn-sec" data-copiar="codigo">Copiar Pix Copia e Cola</button></div>' +
-        '<div class="dica" style="margin:10px 0 0">No app do banco, aparece o meu nome completo:<br><b style="white-space:nowrap">Renato dos Reis Paes Leme Neto</b><br>Obrigado!</div></div>';
+        '<div class="dica" style="margin:10px 0 0">No app do banco vai aparecer o meu nome completo:<br><b style="white-space:nowrap">Renato dos Reis Paes Leme Neto</b><br>Obrigado!</div></div>';
     }
     return h;
   }
