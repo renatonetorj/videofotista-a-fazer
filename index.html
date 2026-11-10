@@ -337,7 +337,7 @@
     nome: "Renato Reis Neto",
     cidade: "Rio de Janeiro"
   };
-  var VERSAO = "1.5.1";
+  var VERSAO = "1.5.2";
 
   // ---------- sincronização (Firebase) ----------
   // Preencha com o firebaseConfig do projeto para ligar a sincronização.
@@ -984,10 +984,11 @@
         '<p class="texto-cafe">O Videofotista A Fazer é um presente feito por mim, Renato Neto, O Videofotista. ' +
         "Se ele te ajuda, um cafezinho, uma soda tônica ou uma água mineral com gás pelo Pix vão ser muito bem-vindos. Qualquer valor.</p>" +
         (svg ? '<div class="qr">' + svg + "</div>" : "") +
+        '<div class="dica" style="margin:4px 0 8px">Aponte a câmera do app do banco, ou use o Pix Copia e Cola.</div>' +
         '<div class="chave-pix">Chave Pix: ' + esc(PIX.chave) + "</div>" +
         '<div class="linha-acao" style="justify-content:center;flex-wrap:wrap"><button class="btn-add" data-copiar="chave">Copiar chave Pix</button>' +
         '<button class="btn-sec" data-copiar="codigo">Copiar Pix Copia e Cola</button></div>' +
-        '<div class="dica" style="margin:10px 0 0">No app do banco, aparece o meu nome completo: <b>Renato dos Reis Paes Leme Neto</b>.</div></div>';
+        '<div class="dica" style="margin:10px 0 0">No app do banco, aparece o meu nome completo:<br><b style="white-space:nowrap">Renato dos Reis Paes Leme Neto</b><br>Obrigado!</div></div>';
     }
     return h;
   }
