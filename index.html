@@ -7,7 +7,7 @@
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="icon" type="image/png" href="icon-192.png">
-<meta name="theme-color" content="#5a5a5a">
+<meta name="theme-color" content="#737373">
 <meta name="robots" content="noindex, nofollow">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
@@ -15,7 +15,7 @@
 <meta name="apple-mobile-web-app-title" content="A Fazer">
 <style>
   :root {
-    --bg: #5a5a5a;
+    --bg: #737373;
     --card: #4a4a4a;
     --card2: #434343;
     --linha: rgba(255,255,255,.08);
@@ -44,7 +44,7 @@
   h1 .marca { display: flex; align-items: center; color: #fff; white-space: nowrap; }
   h1 .marca svg { width: 23px; height: 23px; margin: 0 2px; flex: none; }
   h1 .app { color: var(--amarelo); text-align: center; white-space: nowrap; }
-  .data { margin-top: 8px; color: var(--suave); font-size: 12.5px; }
+  .data { margin-top: 8px; color: #fff; font-size: 12.5px; }
 
   nav { display: flex; gap: 6px; justify-content: center; padding: 6px 14px 12px; }
   nav button {
@@ -108,7 +108,7 @@
   }
 
   .filtro {
-    display: flex; align-items: center; gap: 8px; margin: 0 2px 8px; color: var(--suave); font-size: 12.5px;
+    display: flex; align-items: center; gap: 8px; margin: 0 2px 8px; color: #fff; font-size: 12.5px;
   }
 
   .lista { list-style: none; margin: 0; padding: 0; }
@@ -156,15 +156,15 @@
   .detalhe .linha-opcoes { margin: 8px 0 0; }
 
   .vazio {
-    border: 1px dashed rgba(255,255,255,.2); border-radius: 12px;
-    padding: 22px 14px; text-align: center; color: var(--suave);
+    border: 1px dashed rgba(255,255,255,.45); border-radius: 12px;
+    padding: 22px 14px; text-align: center; color: #fff;
   }
   .vazio .grande { font-size: 15px; color: var(--txt); font-weight: 600; margin-bottom: 4px; }
   .rodape-hoje { text-align: center; margin-top: 10px; }
-  .link { background: none; border: 0; color: var(--suave); text-decoration: underline; font-size: 12.5px; padding: 0; }
+  .link { background: none; border: 0; color: #fff; text-decoration: underline; font-size: 12.5px; padding: 0; }
   .link:hover { color: var(--txt); }
 
-  .grupo { color: var(--suave); font-size: 12px; font-weight: 700; text-transform: uppercase;
+  .grupo { color: #fff; font-size: 12px; font-weight: 700; text-transform: uppercase;
            letter-spacing: .5px; margin: 14px 4px 6px; }
   .item.feita .texto { color: var(--suave); }
   .item.feita .acoes { opacity: 1; }
@@ -212,7 +212,7 @@
 
   footer {
     display: flex; align-items: center; gap: 6px; padding: 8px 14px 10px;
-    border-top: 1px solid var(--linha); color: var(--suave); font-size: 12px; position: relative;
+    border-top: 1px solid var(--linha); color: var(--suave); font-size: 12px; position: relative; background: #3B3B3B;
   }
   #statusSync { margin-left: 8px; white-space: nowrap; }
   .sync-sincronizado { color: var(--verde); }
@@ -246,7 +246,7 @@
   .toast button { background: var(--amarelo); color: #1d1d1d; border: 0; border-radius: 999px;
                   padding: 4px 12px; font-weight: 700; font-size: 12px; }
   .toast button:empty { display: none; }
-  .dica { color: var(--suave); font-size: 11.5px; margin: 2px 4px 10px; }
+  .dica { color: #fff; font-size: 11.5px; margin: 2px 4px 10px; }
 
   /* em tela larga (navegador do computador) o app vira uma coluna centralizada */
   header, nav, main, footer { width: 100%; max-width: 560px; margin-left: auto; margin-right: auto; box-sizing: border-box; }
@@ -337,7 +337,7 @@
     nome: "Renato Reis Neto",
     cidade: "Rio de Janeiro"
   };
-  var VERSAO = "1.5.3";
+  var VERSAO = "1.5.4";
 
   // ---------- sincronização (Firebase) ----------
   // Preencha com o firebaseConfig do projeto para ligar a sincronização.
