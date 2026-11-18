@@ -15,8 +15,11 @@ O que não for feito passa sozinho para o dia seguinte.
 - Feitos guardados, com busca, para reusar ou devolver para hoje
 - Observação em cada tarefa
 - Backup em arquivo (.json), com lembrete
+- Celular e computador juntos: entre com a sua conta Google e veja as mesmas tarefas em todos os aparelhos
 
-Sem cadastro: as tarefas ficam só no seu aparelho.
+Sem cadastro: as tarefas ficam só no seu aparelho. Se quiser usar em mais de um aparelho,
+vá na engrenagem e toque em **Entrar com o Google**. As tarefas passam a ficar num arquivo
+no seu próprio Google Drive ("Videofotista A Fazer - dados.json"). Ninguém mais vê.
 
 ## No celular (iPhone ou Android)
 
@@ -33,6 +36,7 @@ No celular, o lembrete avisa com o app aberto.
 Baixe o arquivo **[Videofotista-A-Fazer-Mac.zip](Videofotista-A-Fazer-Mac.zip)**, descompacte e siga o LEIA-ME
 (é só clicar duas vezes em **Instalar.command**). O app fica na barra de menu, abre ao ligar o Mac
 e faz backup automático todo dia.
+Para sincronizar com o celular pelo Google, use no Mac a versão do navegador (o Google não permite entrar pela versão do Mac).
 
 ## Gostou?
 

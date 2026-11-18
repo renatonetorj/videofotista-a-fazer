@@ -215,6 +215,9 @@
     border-top: 1px solid var(--linha); color: var(--suave); font-size: 12px; position: relative; background: #3B3B3B;
   }
   #statusSync { margin-left: 8px; white-space: nowrap; }
+  #statusDrive { margin-left: 8px; white-space: nowrap; font-size: 12px; padding: 0; color: var(--suave); text-decoration: none; }
+  #statusDrive.ok { color: var(--verde); }
+  #statusDrive.alerta { color: var(--amarelo); text-decoration: underline; }
   .sync-sincronizado { color: var(--verde); }
   .sync-offline, .sync-enviando, .sync-sincronizando { color: var(--suave); }
   .sync-erro { color: var(--coral); }
@@ -308,7 +311,7 @@
 </nav>
 <main id="conteudo"></main>
 <footer>
-  <span id="status"></span><span id="statusSync"></span>
+  <span id="status"></span><span id="statusSync"></span><button class="link" id="statusDrive" data-drive="agora" hidden></button>
   <span class="espaco"></span>
   <button class="btn-rodape redondo" id="btnSobre" title="Sobre e contribuição">☕</button>
   <button class="btn-rodape redondo" id="btnPrefs" title="Preferências">
@@ -337,7 +340,7 @@
     nome: "Renato Reis Neto",
     cidade: "Rio de Janeiro"
   };
-  var VERSAO = "1.5.4";
+  var VERSAO = "1.6";
 
   // ---------- sincronização (Firebase) ----------
   // Preencha com o firebaseConfig do projeto para ligar a sincronização.
@@ -462,6 +465,7 @@
     carimbar();
     persistirLocal();
     enviarNuvem();
+    driveAgendar();
   }
   function persistirLocal() {
     var json = JSON.stringify(D);
@@ -891,6 +895,7 @@
   function telaPrefs() {
     var h = '<button class="btn-sec voltar" data-ir="hoje">‹ Voltar</button>';
     h += htmlSync();
+    h += htmlDrive();
 
     h += '<div class="caixa"><h3>Tarefas</h3>' +
       '<div class="pref"><div class="rot">Subir a prioridade a cada dia adiado<small>Baixa vira Média, Média vira Alta. "Sem" não muda.</small></div>' + chave("subirPrioridade", C.subirPrioridade) + "</div>" +
@@ -1037,6 +1042,7 @@
     var b = e.target.closest("button");
     if (b) irPara(b.dataset.aba);
   });
+  document.getElementById("statusDrive").onclick = function () { if (tokOk()) driveSincronizar(); else driveLigar(); };
   document.getElementById("btnPrefs").onclick = function () { irPara(aba === "prefs" ? "hoje" : "prefs"); };
   document.getElementById("btnSobre").onclick = function () { irPara(aba === "sobre" ? "hoje" : "sobre"); };
 
@@ -1113,6 +1119,13 @@
       else if (a0 === "criar") entrarOuCriar(true);
       else if (a0 === "esqueci") esqueciSenha();
       else if (a0 === "sair") sairConta();
+      return;
+    }
+    if (b.dataset.drive) {
+      var d0 = b.dataset.drive;
+      if (d0 === "ligar" || d0 === "renovar") driveLigar();
+      else if (d0 === "agora") { if (tokOk()) driveSincronizar(); else driveLigar(); }
+      else if (d0 === "desligar") driveDesligar();
       return;
     }
     if (b.dataset.copiar) { copiar(b.dataset.copiar === "chave" ? PIX.chave : payloadPix()); return; }
@@ -1344,7 +1357,7 @@
   }
   // lembrete: fora do Mac, sem conta conectada, a cada 7 dias
   function precisaLembrarBackup() {
-    if (NATIVO || SYNC.uid || C.lembreteBackup === false) return false;
+    if (NATIVO || SYNC.uid || driveOn() || C.lembreteBackup === false) return false;
     if (D.tarefas.length + D.rotinas.length < 3) return false;
     var agora = Date.now();
     if (C.backupDepois && agora < C.backupDepois) return false;
@@ -1639,6 +1652,210 @@
     }
   });
 
+
+  // ---------- sincronização pelo Google Drive da própria pessoa ----------
+  // As tarefas ficam num arquivo no Drive de quem usa ("Videofotista A Fazer - dados.json").
+  // Escopo drive.file: o app só enxerga o arquivo que ele mesmo criou. Nada passa pela conta do Renato.
+  var GCLIENT = "210279865763-ov6me7qi178cagbqmbbptktnfbiq7j59.apps.googleusercontent.com";
+  var GSCOPE = "https://www.googleapis.com/auth/drive.file openid email";
+  var GARQ = "Videofotista A Fazer - dados.json";
+  var DRV = { estado: "", quando: null, rodando: false, deNovo: false, timer: null, semDrive: false };
+  var gTok = null, gCli = null, gPend = null;
+  function lsG(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }
+  function lsS(k, v) { try { if (v === null || v === "") localStorage.removeItem(k); else localStorage.setItem(k, v); } catch (e) {} }
+  try { gTok = JSON.parse(lsG("afz_g_tok") || "null"); } catch (e) { gTok = null; }
+  function driveDisp() { return !NATIVO && !C.syncLigado && !!GCLIENT; }
+  function driveOn() { return driveDisp() && lsG("afz_drive") === "1"; }
+  function tokOk() { return !!(gTok && gTok.token && gTok.exp > Date.now()); }
+
+  function gisCarregar() {
+    return new Promise(function (ok) {
+      if (window.google && google.accounts && google.accounts.oauth2) return ok(true);
+      var ja = document.getElementById("gis");
+      if (ja) { ja.addEventListener("load", function () { ok(true); }); ja.addEventListener("error", function () { ok(false); }); return; }
+      var sc = document.createElement("script");
+      sc.id = "gis"; sc.src = "https://accounts.google.com/gsi/client"; sc.async = true;
+      sc.onload = function () { ok(true); }; sc.onerror = function () { ok(false); };
+      document.head.appendChild(sc);
+    });
+  }
+  function gCliente() {
+    if (gCli) return gCli;
+    if (!(window.google && google.accounts && google.accounts.oauth2)) return null;
+    gCli = google.accounts.oauth2.initTokenClient({
+      client_id: GCLIENT, scope: GSCOPE,
+      callback: function (r) {
+        var f = gPend; gPend = null;
+        if (!r || r.error || !r.access_token) { driveEstado("precisa"); toast("O Google não liberou o acesso. Tente de novo."); if (f) f(false); return; }
+        if (google.accounts.oauth2.hasGrantedAllScopes && !google.accounts.oauth2.hasGrantedAllScopes(r, "https://www.googleapis.com/auth/drive.file")) {
+          DRV.semDrive = true; driveEstado("semdrive");
+          toast("Faltou marcar a caixinha do Google Drive. Toque de novo e marque antes de Continuar.");
+          if (f) f(false); return;
+        }
+        DRV.semDrive = false;
+        gTok = { token: r.access_token, exp: Date.now() + (Number(r.expires_in || 3600) - 120) * 1000, email: (gTok && gTok.email) || "" };
+        fetch("https://www.googleapis.com/oauth2/v3/userinfo", { headers: { Authorization: "Bearer " + gTok.token } })
+          .then(function (x) { return x.json(); }).then(function (u) { if (u && u.email) { gTok.email = u.email; lsS("afz_g_tok", JSON.stringify(gTok)); if (aba === "prefs") render(); } })
+          .catch(function () {});
+        lsS("afz_g_tok", JSON.stringify(gTok));
+        if (f) f(true);
+      },
+      error_callback: function (e) {
+        var f = gPend; gPend = null; driveEstado("precisa");
+        toast(e && e.type === "popup_failed_to_open" ? "O navegador bloqueou a janela do Google. Libere janelas (pop-ups) para este site." : "A janela do Google fechou antes de terminar.");
+        if (f) f(false);
+      }
+    });
+    return gCli;
+  }
+  function pedirToken(primeira) {
+    return new Promise(function (ok) {
+      var c = gCliente();
+      if (!c) { toast("Não consegui falar com o Google. Confira a internet."); ok(false); return; }
+      gPend = ok;
+      c.requestAccessToken((primeira || DRV.semDrive) ? { prompt: "consent" } : { prompt: "", login_hint: (gTok && gTok.email) || undefined });
+    });
+  }
+  function gFetch(url, opt) {
+    opt = opt || {};
+    var h = Object.assign({ Authorization: "Bearer " + gTok.token }, opt.headers || {});
+    return fetch(url, Object.assign({}, opt, { headers: h })).then(function (r) {
+      if (r.status === 401 || r.status === 403) { gTok.exp = 0; lsS("afz_g_tok", JSON.stringify(gTok)); var e = new Error("auth"); e.auth = true; throw e; }
+      if (!r.ok) throw new Error("drive " + r.status);
+      return r;
+    });
+  }
+  function driveAchar() {
+    var q = encodeURIComponent("name='" + GARQ + "' and trashed=false");
+    return gFetch("https://www.googleapis.com/drive/v3/files?q=" + q + "&spaces=drive&orderBy=modifiedTime%20desc&fields=files(id)")
+      .then(function (r) { return r.json(); }).then(function (j) { return (j.files && j.files[0]) ? j.files[0].id : null; });
+  }
+  function driveBaixar(id) { return gFetch("https://www.googleapis.com/drive/v3/files/" + id + "?alt=media").then(function (r) { return r.json(); }); }
+  function driveSubir(id, obj) {
+    var corpo = JSON.stringify(obj);
+    if (id) return gFetch("https://www.googleapis.com/upload/drive/v3/files/" + id + "?uploadType=media", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: corpo }).then(function () { return id; });
+    var b = "afz" + Date.now();
+    var body = "--" + b + "\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n" + JSON.stringify({ name: GARQ, mimeType: "application/json" }) +
+      "\r\n--" + b + "\r\nContent-Type: application/json\r\n\r\n" + corpo + "\r\n--" + b + "--";
+    return gFetch("https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id", { method: "POST", headers: { "Content-Type": "multipart/related; boundary=" + b }, body: body })
+      .then(function (r) { return r.json(); }).then(function (j) { return j.id; });
+  }
+  // o arquivo do Drive guarda cada item com a hora em que mudou, igual à sincronização do Renato
+  function fotoDrive() {
+    var itens = {}, m = itensLocais();
+    Object.keys(m).forEach(function (k) { itens[k] = { tipo: k.charAt(0), dados: JSON.parse(JSON.stringify(m[k])), atualizadoEm: m[k].atualizadoEm || 1, apagado: false }; });
+    Object.keys(D.apagadas).forEach(function (k) { if (!itens[k]) itens[k] = { tipo: k.charAt(0), atualizadoEm: D.apagadas[k], apagado: true }; });
+    itens["c:config"] = { tipo: "c", dados: configCompart(), atualizadoEm: D.configEm || 1, apagado: false };
+    return { app: "videofotista-a-fazer", formato: 1, itens: itens };
+  }
+  function assinatura(f) {
+    var it = (f && f.itens) || {};
+    return JSON.stringify(Object.keys(it).sort().map(function (k) { return [k, it[k].atualizadoEm || 0, !!it[k].apagado]; }));
+  }
+  function driveSincronizar() {
+    if (!driveOn()) return;
+    if (!tokOk()) { driveEstado(DRV.semDrive ? "semdrive" : "precisa"); return; }
+    if (DRV.rodando) { DRV.deNovo = true; return; }
+    DRV.rodando = true; driveEstado("rodando");
+    carimbar();
+    var id = lsG("afz_g_arq") || null, remoto = null;
+    (id ? Promise.resolve(id) : driveAchar())
+      .then(function (i) {
+        id = i;
+        if (!id) return null;
+        return driveBaixar(id).catch(function (e) {
+          if (e.auth) throw e;
+          return driveAchar().then(function (i2) { id = i2; return id ? driveBaixar(id) : null; });
+        });
+      })
+      .then(function (r) {
+        remoto = (r && r.itens) ? r : null;
+        if (remoto) receberNuvem(remoto.itens);
+        var local = fotoDrive();
+        if (!remoto || assinatura(local) !== assinatura(remoto)) return driveSubir(id, local);
+        return id;
+      })
+      .then(function (i) { if (i) lsS("afz_g_arq", i); driveEstado("ok"); })
+      .catch(function (e) { driveEstado(e && e.auth ? "precisa" : "erro"); })
+      .then(function () {
+        DRV.rodando = false;
+        if (DRV.deNovo) { DRV.deNovo = false; setTimeout(driveSincronizar, 500); }
+      });
+  }
+  function driveAgendar() {
+    if (!driveOn()) return;
+    clearTimeout(DRV.timer);
+    DRV.timer = setTimeout(driveSincronizar, 2500);
+  }
+  function driveLigar() {
+    if (!driveDisp()) return;
+    var pronto = window.google && google.accounts && google.accounts.oauth2;
+    if (!pronto) { gisCarregar().then(function (ok) { toast(ok ? "Toque de novo para entrar com o Google" : "Não consegui falar com o Google. Confira a internet."); }); return; }
+    var primeiraVez = lsG("afz_drive") !== "1";
+    if (primeiraVez) { lsS("afz_drive", "1"); lsS("afz_g_arq", ""); }
+    driveEstado("rodando");
+    pedirToken(!(gTok && gTok.email)).then(function (ok) {
+      if (!ok) { if (primeiraVez && !tokOk()) lsS("afz_drive", ""); driveEstado(driveOn() ? "precisa" : ""); render(); return; }
+      driveSincronizar();
+      if (aba === "prefs") render();
+    });
+  }
+  function driveDesligar() {
+    if (!confirmar("Parar de sincronizar com o Google Drive? As tarefas continuam neste aparelho e o arquivo continua no seu Drive.")) return;
+    try { if (gTok && gTok.token && window.google && google.accounts && google.accounts.oauth2) google.accounts.oauth2.revoke(gTok.token, function () {}); } catch (e) {}
+    lsS("afz_drive", ""); lsS("afz_g_arq", ""); lsS("afz_g_tok", "");
+    gTok = null; DRV.estado = ""; driveStatus(); render();
+    toast("Sincronização com o Google desligada");
+  }
+  function confirmar(msg) { try { return window.confirm(msg); } catch (e) { return true; } }
+  var ROTULO_DRIVE = { rodando: "☁ sincronizando…", ok: "☁ sincronizado", erro: "☁ sem conexão, sincroniza depois", precisa: "☁ toque para sincronizar", semdrive: "☁ toque e marque o Google Drive" };
+  function driveEstado(e) { DRV.estado = e; if (e === "ok") DRV.quando = new Date(); driveStatus(); }
+  function driveStatus() {
+    var el = document.getElementById("statusDrive");
+    if (el) {
+      if (!driveOn()) { el.hidden = true; }
+      else {
+        el.hidden = false;
+        el.textContent = ROTULO_DRIVE[DRV.estado] || "☁ Google Drive";
+        el.className = "link" + (DRV.estado === "ok" ? " ok" : (DRV.estado === "precisa" || DRV.estado === "semdrive") ? " alerta" : "");
+      }
+    }
+    var p = document.getElementById("prefsDriveEstado");
+    if (p) p.textContent = driveTextoEstado();
+  }
+  function driveTextoEstado() {
+    if (DRV.estado === "ok" && DRV.quando) return "Sincronizado às " + String(DRV.quando.getHours()).padStart(2, "0") + ":" + String(DRV.quando.getMinutes()).padStart(2, "0");
+    return { rodando: "Sincronizando…", erro: "Sem conexão. Sincroniza depois.", precisa: "O Google pede para confirmar o acesso. Toque em Sincronizar agora.", semdrive: "Faltou marcar a caixinha do Google Drive. Toque em Sincronizar agora." }[DRV.estado] || "Ligada";
+  }
+  function htmlDrive() {
+    if (C.syncLigado) return "";
+    var h = '<div class="caixa"><h3>Celular e computador juntos</h3>';
+    if (NATIVO) {
+      return h + '<div class="dica" style="margin:0">Para ver as mesmas tarefas no celular e no computador, use o A Fazer pelo navegador (Chrome, Edge ou Safari) e entre com o Google nas Preferências. O Google não permite entrar pela versão do Mac.</div></div>';
+    }
+    if (driveOn()) {
+      h += '<div class="pref"><div class="rot">Sincronizando com o Google Drive' + (gTok && gTok.email ? " de <b>" + esc(gTok.email) + "</b>" : "") +
+        '<small id="prefsDriveEstado">' + esc(driveTextoEstado()) + "</small></div></div>" +
+        '<div class="linha-acao" style="justify-content:space-between;align-items:center">' +
+        '<button class="link" data-drive="desligar">Parar de sincronizar</button>' +
+        '<button class="btn-add" data-drive="agora">Sincronizar agora</button></div>' +
+        '<div class="dica" style="margin:8px 0 0">Entre com a mesma conta Google em cada aparelho. As tarefas ficam no arquivo "' + esc(GARQ) + '", no seu Drive. Ninguém mais vê. De vez em quando o Google pede para confirmar o acesso: é só tocar em Sincronizar agora.</div>';
+    } else {
+      h += '<div class="dica" style="margin:0 0 10px">Quer ver as mesmas tarefas no celular e no computador? Entre com a sua conta Google em cada aparelho. As tarefas ficam num arquivo no seu próprio Google Drive. Ninguém mais vê, nem eu.</div>' +
+        '<div class="linha-acao" style="justify-content:flex-end"><button class="btn-add" data-drive="ligar">Entrar com o Google</button></div>' +
+        '<div class="dica" style="margin:8px 0 0">Na janela do Google, marque a caixinha do Google Drive antes de Continuar.</div>';
+    }
+    return h + "</div>";
+  }
+  function driveIniciar() {
+    driveStatus();
+    if (!driveOn()) return;
+    gisCarregar().then(function () { gCliente(); });
+    driveSincronizar();
+  }
+  document.addEventListener("visibilitychange", function () { if (!document.hidden) driveSincronizar(); });
+  setInterval(function () { if (!document.hidden) driveSincronizar(); }, 90 * 1000);
+
   // ---------- início ----------
   atualizarBase();
   aplicarConfig();
@@ -1647,6 +1864,7 @@
   setInterval(verificarDia, 60 * 1000);
   enviarLembretes();
   iniciarSync();
+  driveIniciar();
   if (!NATIVO) { setInterval(checarLembretesWeb, 30 * 1000); checarLembretesWeb(); }
   if (!NATIVO && "serviceWorker" in navigator && location.protocol === "https:") {
     try { navigator.serviceWorker.register("sw.js"); } catch (e) {}
